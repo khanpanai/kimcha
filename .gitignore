@@ -14,7 +14,7 @@ go.work
 *.state*
 
 **/c
-**/gssm
+**/kimcha
 
 makefile
 *.html
