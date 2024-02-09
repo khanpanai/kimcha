@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/net/context"
-	"kimcha/immu"
+	immu2 "kimcha/pkg/immu"
 	"kimcha/types"
 	"testing"
 )
@@ -20,7 +20,7 @@ type ImmuTestSuite struct {
 }
 
 func (suite *ImmuTestSuite) SetupSuite() {
-	ti := immu.SetupTestImmu()
+	ti := immu2.SetupTestImmu()
 	fmt.Println(ti.Port)
 	inj := do.New()
 	t := suite.T()
@@ -31,14 +31,14 @@ func (suite *ImmuTestSuite) SetupSuite() {
 
 	viper.AutomaticEnv()
 
-	do.Provide(inj, immu.NewDatabase)
-	do.Provide(inj, immu.NewManager)
+	do.Provide(inj, immu2.NewDatabase)
+	do.Provide(inj, immu2.NewManager)
 	suite.inj = inj
 }
 
 func (suite *ImmuTestSuite) TestSet() {
 
-	im := do.MustInvoke[immu.Manager](suite.inj)
+	im := do.MustInvoke[immu2.Manager](suite.inj)
 
 	t := suite.T()
 
@@ -50,7 +50,7 @@ func (suite *ImmuTestSuite) TestGet() {
 
 	val := "bla-bla-bla-bla-bla-bla"
 	ul := types.ULID(ulid.Make().String())
-	im := do.MustInvoke[immu.Manager](suite.inj)
+	im := do.MustInvoke[immu2.Manager](suite.inj)
 
 	t := suite.T()
 

@@ -4,19 +4,18 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
-	"kimcha/types"
 	"log"
 )
 
-func (m *manager) CreateProject(ctx context.Context, name string) (types.ULID, error) {
+func (m *Manager) CreateProject(ctx context.Context, name string) (uuid.UUID, error) {
 
 	id := ulid.Make()
 
-	bytes, _ := uuid.FromBytes(id.Bytes())
+	projectUuid, _ := uuid.FromBytes(id.Bytes())
 
 	err := m.openSession(ctx)
 	if err != nil {
-		return "", err
+		return uuid.Nil, err
 	}
 
 	tx, err := m.client.NewTx(context.TODO())
@@ -24,13 +23,13 @@ func (m *manager) CreateProject(ctx context.Context, name string) (types.ULID, e
 		log.Fatal("failed to start transaction", err)
 	}
 
-	err = tx.SQLExec(ctx, "INSERT INTO project (id, name) values (?, ?)", map[string]interface{}{
-		"id":   bytes.String(),
+	err = tx.SQLExec(ctx, "INSERT INTO projects (id, name) values (@id, @name)", map[string]interface{}{
+		"id":   id.Bytes(),
 		"name": name,
 	})
 	if err != nil {
 		_ = tx.Rollback(ctx)
-		return "", err
+		return uuid.Nil, err
 	}
 
 	_, err = tx.Commit(ctx)
@@ -38,5 +37,5 @@ func (m *manager) CreateProject(ctx context.Context, name string) (types.ULID, e
 		log.Fatal("failed to start transaction", err)
 	}
 
-	return types.ULID(id.String()), nil
+	return projectUuid, nil
 }

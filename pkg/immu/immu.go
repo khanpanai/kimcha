@@ -3,28 +3,20 @@ package immu
 import (
 	"fmt"
 	immudb "github.com/codenotary/immudb/pkg/client"
-	"github.com/samber/do"
+	"github.com/google/uuid"
 	"github.com/spf13/viper"
 	"golang.org/x/net/context"
-	"kimcha/types"
+	"kimcha/internal/usecase"
 )
 
-type Manager interface {
-	openSession(ctx context.Context) error
-	closeSession(ctx context.Context) error
-	SetSecret(ctx context.Context, groupUlid types.ULID, group, key, value string) error
-	GetSecret(ctx context.Context, groupUlid types.ULID, group, key string) (string, error)
-	CreateProject(ctx context.Context, name string) (types.ULID, error)
-}
-
-type manager struct {
+type Manager struct {
 	client   immudb.ImmuClient
 	user     []byte
 	password []byte
 	db       string
 }
 
-func NewDatabase(_ *do.Injector) (immudb.ImmuClient, error) {
+func NewManager() (usecase.Manager, error) {
 	host := viper.GetString("immu.host")
 	port := viper.GetInt("immu.port")
 
@@ -33,18 +25,11 @@ func NewDatabase(_ *do.Injector) (immudb.ImmuClient, error) {
 		WithPort(port)
 	client := immudb.NewClient().WithOptions(opts)
 
-	immuClient := immudb.ImmuClient(client)
-	return immuClient, nil
-}
-
-func NewManager(inj *do.Injector) (Manager, error) {
-	client := do.MustInvoke[immudb.ImmuClient](inj)
-
 	user := viper.GetString("immu.user")
 	password := viper.GetString("immu.password")
 	db := viper.GetString("immu.db")
 
-	return &manager{
+	return &Manager{
 		client:   client,
 		user:     []byte(user),
 		password: []byte(password),
@@ -52,15 +37,15 @@ func NewManager(inj *do.Injector) (Manager, error) {
 	}, nil
 }
 
-func (m *manager) openSession(ctx context.Context) error {
+func (m *Manager) openSession(ctx context.Context) error {
 	return m.client.OpenSession(ctx, m.user, m.password, m.db)
 }
 
-func (m *manager) closeSession(ctx context.Context) error {
+func (m *Manager) closeSession(ctx context.Context) error {
 	return m.client.CloseSession(ctx)
 }
 
-func (m *manager) SetSecret(ctx context.Context, groupUlid types.ULID, group, key, value string) error {
+func (m *Manager) SetSecret(ctx context.Context, projectId uuid.UUID, key, value string) error {
 
 	err := m.openSession(ctx)
 	defer func() {
@@ -72,7 +57,7 @@ func (m *manager) SetSecret(ctx context.Context, groupUlid types.ULID, group, ke
 
 	_, err = m.client.VerifiedSet(
 		ctx,
-		[]byte(fmt.Sprintf("%s.%s.%s", groupUlid, group, key)),
+		[]byte(fmt.Sprintf("%s.%s", projectId.String(), key)),
 		[]byte(value),
 	)
 	if err != nil {
@@ -82,7 +67,7 @@ func (m *manager) SetSecret(ctx context.Context, groupUlid types.ULID, group, ke
 	return nil
 }
 
-func (m *manager) GetSecret(ctx context.Context, groupUlid types.ULID, group, key string) (string, error) {
+func (m *Manager) GetSecret(ctx context.Context, projectId uuid.UUID, key string) (string, error) {
 
 	err := m.openSession(ctx)
 	defer func() {
@@ -95,7 +80,7 @@ func (m *manager) GetSecret(ctx context.Context, groupUlid types.ULID, group, ke
 
 	entry, err := m.client.Get(
 		ctx,
-		[]byte(fmt.Sprintf("%s.%s.%s", groupUlid, group, key)),
+		[]byte(fmt.Sprintf("%s.%s", projectId.String(), key)),
 	)
 	if err != nil {
 		return "", err

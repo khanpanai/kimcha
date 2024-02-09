@@ -24,7 +24,7 @@ func GenerateSecretKey() (string, string) {
 
 	secret := string(key)
 
-	for i := 2; i < len(key); i++ {
+	for i := 2; i < len(key)-2; i++ {
 		key[i] = '*'
 	}
 

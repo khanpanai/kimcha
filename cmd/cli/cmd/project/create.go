@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/samber/do"
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 	"kimcha/config"
-	"kimcha/immu"
+	"kimcha/internal/usecase"
+	"kimcha/pkg/immu"
 	"os"
 	"strings"
 )
@@ -18,17 +18,17 @@ type createProjectModel struct {
 
 	name string
 
-	inj *do.Injector
+	uc usecase.DataManager
 }
 
-func initialModel(inj *do.Injector) createProjectModel {
+func initialModel(uc usecase.DataManager) createProjectModel {
 	ti := textinput.New()
 	ti.Placeholder = "New project name"
 	ti.Focus()
 	ti.EchoMode = textinput.EchoNormal
 	return createProjectModel{
 		masterKeyInput: ti,
-		inj:            inj,
+		uc:             uc,
 	}
 }
 
@@ -67,9 +67,7 @@ func (m createProjectModel) View() string {
 func (m createProjectModel) handleSubmit() tea.Cmd {
 	m.name = m.masterKeyInput.Value()
 
-	im := do.MustInvoke[immu.Manager](m.inj)
-
-	_, err := im.CreateProject(context.Background(), m.name)
+	_, err := m.uc.CreateProject(context.Background(), m.name)
 	if err != nil {
 		fmt.Println(err.Error())
 		return tea.Quit
@@ -81,13 +79,18 @@ func (m createProjectModel) handleSubmit() tea.Cmd {
 var CreateCmd = &cobra.Command{
 	Use:   "create",
 	Short: "",
-	Run: func(cmd *cobra.Command, args []string) {
+	PreRun: func(cmd *cobra.Command, args []string) {
 		config.ReadConfigFromHomeDirToViper()
-		injector := do.New()
-		do.Provide(injector, immu.NewDatabase)
-		do.Provide(injector, immu.NewManager)
+	},
+	Run: func(cmd *cobra.Command, args []string) {
+		uc, err := immu.NewManager()
 
-		p := tea.NewProgram(initialModel(injector))
+		if err != nil {
+			fmt.Printf("error %s", err)
+			os.Exit(1)
+		}
+
+		p := tea.NewProgram(initialModel(uc))
 		if _, err := p.Run(); err != nil {
 			fmt.Printf("error %s", err)
 			os.Exit(1)
