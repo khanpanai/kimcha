@@ -14,6 +14,9 @@ func (m *Manager) CreateProject(ctx context.Context, name string) (uuid.UUID, er
 	projectUuid, _ := uuid.FromBytes(id.Bytes())
 
 	err := m.openSession(ctx)
+	defer func() {
+		_ = m.closeSession(ctx)
+	}()
 	if err != nil {
 		return uuid.Nil, err
 	}

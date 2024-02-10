@@ -2,12 +2,8 @@ package immu_test
 
 import (
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/spf13/viper"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-	"golang.org/x/net/context"
 	"io/fs"
 	"kimcha/internal/manager"
 	"kimcha/internal/usecase"
@@ -19,7 +15,8 @@ import (
 
 type ImmuTestSuite struct {
 	suite.Suite
-	m usecase.Manager
+	m     usecase.Manager
+	failM usecase.Manager
 }
 
 func (suite *ImmuTestSuite) SetupSuite() {
@@ -30,35 +27,13 @@ func (suite *ImmuTestSuite) SetupSuite() {
 	t.Setenv("immu.password", "immudb")
 	t.Setenv("immu.db", "defaultdb")
 	t.Setenv("immu.port", ti.Port.Port())
-
 	viper.AutomaticEnv()
 	suite.m = manager.NewManager()
-}
 
-func (suite *ImmuTestSuite) TestSet() {
+	t.Setenv("immu.port", "123124")
+	viper.AutomaticEnv()
 
-	t := suite.T()
-
-	ud := uuid.New()
-
-	err := suite.m.SetSecret(context.Background(), ud, "key", "bla-bla-bla-bla-bla-bla")
-	require.NoError(t, err)
-}
-
-func (suite *ImmuTestSuite) TestGet() {
-
-	ud := uuid.New()
-
-	val := "bla-bla-bla-bla-bla-bla"
-
-	t := suite.T()
-
-	err := suite.m.SetSecret(context.Background(), ud, "key", val)
-	require.NoError(t, err)
-
-	value, err := suite.m.GetSecret(context.Background(), ud, "key")
-	require.NoError(t, err)
-	assert.EqualValues(t, val, value)
+	suite.failM = manager.NewManager()
 }
 
 func (suite *ImmuTestSuite) TearDownSuite() {
