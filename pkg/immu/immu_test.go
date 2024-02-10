@@ -2,27 +2,26 @@ package immu_test
 
 import (
 	"fmt"
-	"github.com/oklog/ulid/v2"
-	"github.com/samber/do"
+	"github.com/google/uuid"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/net/context"
+	"kimcha/internal/manager"
+	"kimcha/internal/usecase"
 	immu2 "kimcha/pkg/immu"
-	"kimcha/types"
 	"testing"
 )
 
 type ImmuTestSuite struct {
 	suite.Suite
-	inj *do.Injector
+	m usecase.Manager
 }
 
 func (suite *ImmuTestSuite) SetupSuite() {
 	ti := immu2.SetupTestImmu()
 	fmt.Println(ti.Port)
-	inj := do.New()
 	t := suite.T()
 	t.Setenv("immu.user", "immudb")
 	t.Setenv("immu.password", "immudb")
@@ -30,35 +29,31 @@ func (suite *ImmuTestSuite) SetupSuite() {
 	t.Setenv("immu.port", ti.Port.Port())
 
 	viper.AutomaticEnv()
-
-	do.Provide(inj, immu2.NewDatabase)
-	do.Provide(inj, immu2.NewManager)
-	suite.inj = inj
+	suite.m = manager.NewManager()
 }
 
 func (suite *ImmuTestSuite) TestSet() {
 
-	im := do.MustInvoke[immu2.Manager](suite.inj)
-
 	t := suite.T()
 
-	err := im.SetSecret(context.Background(), types.ULID(ulid.Make().String()), "group", "key", "bla-bla-bla-bla-bla-bla")
+	ud := uuid.New()
+
+	err := suite.m.SetSecret(context.Background(), ud, "key", "bla-bla-bla-bla-bla-bla")
 	require.NoError(t, err)
 }
 
 func (suite *ImmuTestSuite) TestGet() {
 
+	ud := uuid.New()
+
 	val := "bla-bla-bla-bla-bla-bla"
-	ul := types.ULID(ulid.Make().String())
-	im := do.MustInvoke[immu2.Manager](suite.inj)
 
 	t := suite.T()
 
-	err := im.SetSecret(context.Background(), ul, "group", "key", val)
+	err := suite.m.SetSecret(context.Background(), ud, "key", val)
 	require.NoError(t, err)
 
-	value, err := im.GetSecret(context.Background(), ul, "group", "key")
-	fmt.Printf("errorrr %s", err)
+	value, err := suite.m.GetSecret(context.Background(), ud, "key")
 	require.NoError(t, err)
 	assert.EqualValues(t, val, value)
 }

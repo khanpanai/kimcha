@@ -7,8 +7,8 @@ import (
 	"github.com/spf13/cobra"
 	"golang.org/x/net/context"
 	"kimcha/config"
+	"kimcha/internal/manager"
 	"kimcha/internal/usecase"
-	"kimcha/pkg/immu"
 	"os"
 	"strings"
 )
@@ -83,14 +83,8 @@ var CreateCmd = &cobra.Command{
 		config.ReadConfigFromHomeDirToViper()
 	},
 	Run: func(cmd *cobra.Command, args []string) {
-		uc, err := immu.NewManager()
-
-		if err != nil {
-			fmt.Printf("error %s", err)
-			os.Exit(1)
-		}
-
-		p := tea.NewProgram(initialModel(uc))
+		m := manager.NewDataManager()
+		p := tea.NewProgram(initialModel(m))
 		if _, err := p.Run(); err != nil {
 			fmt.Printf("error %s", err)
 			os.Exit(1)
