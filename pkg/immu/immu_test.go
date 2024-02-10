@@ -8,9 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/net/context"
+	"io/fs"
 	"kimcha/internal/manager"
 	"kimcha/internal/usecase"
 	immu2 "kimcha/pkg/immu"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -56,6 +59,21 @@ func (suite *ImmuTestSuite) TestGet() {
 	value, err := suite.m.GetSecret(context.Background(), ud, "key")
 	require.NoError(t, err)
 	assert.EqualValues(t, val, value)
+}
+
+func (suite *ImmuTestSuite) TearDownSuite() {
+	_ = filepath.Walk(".", func(path string, info fs.FileInfo, err error) error {
+		if path == "." || path[0] != '.' {
+			return nil
+		}
+
+		err = os.Remove(path)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 func TestImmuTestSuite(t *testing.T) {
